@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGOPIM 后台管理系统</title>
+<!-- Vue 3 + Element Plus CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vue-router@4/dist/vue-router.global.prod.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: "PingFang SC","Microsoft YaHei",sans-serif; }
+#app { height: 100%; }
+
+/* Login */
+.login-page {
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.login-card { width: 420px; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }
+.login-title { text-align: center; font-size: 24px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.login-sub { text-align: center; font-size: 14px; color: #999; margin-bottom: 32px; }
+.captcha-row { display: flex; gap: 12px; align-items: flex-start; }
+.captcha-row .el-input { flex: 1; }
+.captcha-img { cursor: pointer; flex-shrink: 0; border-radius: 4px; overflow: hidden; border: 1px solid #dcdfe6; height: 38px; }
+
+/* Layout */
+.layout-container { display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar (RuoYi-style) */
+.sidebar { width: 200px; background: #191a23; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.25s; }
+.sidebar.collapsed { width: 64px; }
+.sidebar-header { height: 50px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+.sidebar-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+.menu-item {
+  display: flex; align-items: center; padding: 12px 16px; cursor: pointer; color: #bfcbd9; font-size: 14px; transition: all 0.15s; gap: 10px; white-space: nowrap; overflow: hidden;
+}
+.menu-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.menu-item.active { background: #409eff; color: #fff; }
+.menu-item .menu-icon { width: 20px; text-align: center; flex-shrink: 0; font-size: 16px; }
+.menu-item .menu-label { overflow: hidden; text-overflow: ellipsis; }
+.sidebar.collapsed .menu-item { justify-content: center; padding: 12px 0; }
+.sidebar.collapsed .menu-label { display: none; }
+
+/* Main area */
+.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f0f2f5; }
+.topbar { height: 50px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.toggle-btn { cursor: pointer; font-size: 18px; color: #666; }
+.toggle-btn:hover { color: #409eff; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-user { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #333; cursor: pointer; }
+.topbar-time { font-size: 13px; color: #999; }
+
+.content-area { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* Page common */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-title { font-size: 16px; font-weight: 600; color: #333; }
+.search-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.search-form .el-input { width: 200px; }
+.table-actions { display: flex; gap: 12px; margin-bottom: 12px; }
+
+/* Dashboard */
+.dashboard-card { background: #fff; border-radius: 6px; padding: 24px; margin-bottom: 16px; }
+.dashboard-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: #fff; border-radius: 6px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.stat-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
+.stat-num { font-size: 28px; font-weight: 600; color: #333; }
+.stat-label { font-size: 13px; color: #999; }
+
+/* Content card */
+.content-card { background: #fff; border-radius: 6px; padding: 16px; }
+
+/* Upload preview */
+.upload-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; }
+
+/* File list in table */
+.file-link { color: #409eff; text-decoration: none; font-size: 13px; }
+.file-link:hover { text-decoration: underline; }
+
+/* Modal logo display */
+.detail-logo { width: 120px; height: 120px; object-fit: contain; border-radius: 8px; border: 1px solid #eee; }
+.detail-info { margin-top: 16px; }
+.detail-info p { margin-bottom: 8px; font-size: 14px; color: #333; }
+.detail-info .label { color: #999; display: inline-block; width: 80px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <router-view></router-view>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick, h } = Vue;
+const { ElMessage, ElMessageBox, ElLoading } = ElementPlus;
+
+// Axios instance
+const api = axios.create({ baseURL: '/api', timeout: 30000 });
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('admin_token');
+  if (token) config.headers.Authorization = 'Bearer ' + token;
+  return config;
+});
+api.interceptors.response.use(res => {
+  if (res.data.code === 401) {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    router.push('/login');
+  }
+  if (res.data.code !== 200) {
+    ElMessage.error(res.data.msg || '请求失败');
+    return Promise.reject(res.data);
+  }
+  return res.data;
+}, err => {
+  if (err.response && err.response.status === 401) {
+    localStorage.removeItem('admin_token');
+    router.push('/login');
+  }
+  ElMessage.error('网络错误');
+  return Promise.reject(err);
+});
+
+// --- Login Component ---
+const Login = {
+  template: `
+    <div class="login-page">
+      <div class="login-card">
+        <div class="login-title">LOGOPIM</div>
+        <div class="login-sub">产品标识管理后台</div>
+        <el-form :model="form" @submit.prevent="handleLogin" label-width="0">
+          <el-form-item><el-input v-model="form.username" placeholder="账号" size="large" prefix-icon="User" /></el-form-item>
+          <el-form-item><el-input v-model="form.password" type="password" placeholder="密码" size="large" prefix-icon="Lock" show-password @keyup.enter="handleLogin" /></el-form-item>
+          <el-form-item>
+            <div class="captcha-row">
+              <el-input v-model="form.captchaCode" placeholder="验证码" size="large" style="flex:1" @keyup.enter="handleLogin" />
+              <div class="captcha-img" @click="loadCaptcha" v-html="captchaSvg" style="width:120px;height:38px;"></div>
+            </div>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" size="large" style="width:100%" @click="handleLogin" :loading="loading">登 录</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+  `,
+  setup() {
+    const form = reactive({ username: '', password: '', captchaCode: '', captchaUuid: '' });
+    const captchaSvg = ref('');
+    const loading = ref(false);
+
+    function loadCaptcha() {
+      api.get('/auth/captcha').then(res => {
+        captchaSvg.value = res.data.img;
+        form.captchaUuid = res.data.uuid;
+      });
+    }
+
+    function handleLogin() {
+      if (!form.username || !form.password || !form.captchaCode) {
+        ElMessage.warning('请填写完整信息'); return;
+      }
+      loading.value = true;
+      api.post('/auth/login', form).then(res => {
+        localStorage.setItem('admin_token', res.data.token);
+        localStorage.setItem('admin_user', JSON.stringify(res.data.user));
+        ElMessage.success('登录成功');
+        router.push('/');
+      }).finally(() => { loading.value = false; });
+    }
+
+    onMounted(loadCaptcha);
+    return { form, captchaSvg, loading, handleLogin, loadCaptcha };
+  }
+};
+
+// --- Dashboard Component ---
+const Dashboard = {
+  template: `
+    <div>
+      <div class="page-header"><div class="page-title">首页</div></div>
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#409eff"><el-icon><Collection /></el-icon></div>
+          <div><div class="stat-num">{{stats.categories}}</div><div class="stat-label">产品分类</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#67c23a"><el-icon><Picture /></el-icon></div>
+          <div><div class="stat-num">{{stats.products}}</div><div class="stat-label">产品素材</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#e6a23c"><el-icon><Download /></el-icon></div>
+          <div><div class="stat-num">{{stats.downloads}}</div><div class="stat-label">下载次数</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#909399"><el-icon><Document /></el-icon></div>
+          <div><div class="stat-num">{{stats.operations}}</div><div class="stat-label">操作记录</div></div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <h3 style="margin-bottom:12px;font-size:15px;">系统信息</h3>
+        <p style="color:#666;line-height:2;font-size:14px;">
+          系统名称：LOGOPIM 产品标识管理平台<br>
+          技术栈：Vue3 + Element Plus + Node.js Express<br>
+          存储方式：本地文件系统<br>
+          管理员：{{user?.nickName || user?.username}}
+        </p>
+      </div>
+    </div>
+  `,
+  setup() {
+    const stats = reactive({ categories: 0, products: 0, downloads: 0, operations: 0 });
+    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    api.get('/category/all').then(r => stats.categories = r.data.length);
+    api.get('/product/public/list').then(r => stats.products = r.data.length);
+    api.get('/download/list?pageSize=1').then(r => stats.downloads = r.data.total);
+    api.get('/operation/list?pageSize=1').then(r => stats.operations = r.data.total);
+    return { stats, user };
+  }
+};
+
+// --- Category Management ---
+const Category = {
+  template: `
+    <div>
+      <div class="page-header">
+        <div class="page-title">产品分类管理</div>
+        <el-button type="primary" size="small" @click="openAdd">新增分类</el-button>
+      </div>
+      <div class="content-card">
+        <div class="search-form">
+          <el-input v-model="query.name" placeholder="分类名称" clearable @change="loadData" />
+          <el-button type="primary" @click="loadData">搜索</el-button>
+        </div>
+        <el-table :data="list" stripe v-loading="loading" style="width:100%">
+          <el-table-column prop="id" label="ID" width="60" />
+          <el-table-column prop="name" label="分类名称" />
+          <el-table-column prop="sort" label="排序权重" width="100" />
+          <el-table-column prop="remark" label="备注" />
+          <el-table-column prop="createTime" label="创建时间" width="170" :formatter="fmtTime" />
+          <el-table-column label="操作" width="160">
+            <template #default="{row}">
+              <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div style="margin-top:16px;text-align:right">
+          <el-pagination v-model:page-size="pageSize" :total="total" :current-page="page" layout="total,prev,pager,next" @current-change="goPage" small />
+        </div>
+      </div>
+    </div>
+    <el-dialog v-model="dialogVisible" :title="isEdit?'编辑分类':'新增分类'" width="420px" :close-on-click-modal="false">
+      <el-form :model="form" ref="formRef" label-width="90px">
+        <el-form-item label="分类名称" prop="name" :rules="[{required:true,message:'请输入分类名称'}]">
+          <el-input v-model="form.name" placeholder="前端标签展示文本" />
+        </el-form-item>
+        <el-form-item label="排序权重" prop="sort" :rules="[{required:true,message:'请输入排序权重'}]">
+          <el-input-number v-model="form.sort" :min="0" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="3" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible=false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="saving">确定</el-button>
+      </template>
+    </el-dialog>
+  `,
+  setup() {
+    const list = ref([]); const loading = ref(false); const total = ref(0); const page = ref(1); const pageSize = ref(10);
+    const query = reactive({ name: '' });
+    const dialogVisible = ref(false); const isEdit = ref(false); const editingId = ref(null);
+    const form = reactive({ name: '', sort: 0, remark: '' });
+    const saving = ref(false); const formRef = ref(null);
+
+    function loadData() {
+      loading.value = true; page.value = 1;
+      api.get('/category/list', { params: { ...query, page: page.value, pageSize: pageSize.value } }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function goPage(p) { page.value = p; loading.value = true;
+      api.get('/category/list', { params: { ...query, page: p, pageSize: pageSize.value } }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function openAdd() {
+      isEdit.value = false; editingId.value = null;
+      form.name = ''; form.sort = 0; form.remark = '';
+      dialogVisible.value = true;
+      nextTick(() => formRef.value?.clearValidate());
+    }
+    function openEdit(row) {
+      isEdit.value = true; editingId.value = row.id;
+      form.name = row.name; form.sort = row.sort; form.remark = row.remark;
+      dialogVisible.value = true;
+      nextTick(() => formRef.value?.clearValidate());
+    }
+    function handleSubmit() {
+      formRef.value.validate(valid => {
+        if (!valid) return;
+        saving.value = true;
+        const req = isEdit.value ? api.put('/category/' + editingId.value, form) : api.post('/category', form);
+        req.then(r => { ElMessage.success('操作成功'); dialogVisible.value = false; loadData(); }).finally(() => saving.value = false);
+      });
+    }
+    function handleDelete(row) {
+      ElMessageBox.confirm('确定删除分类「' + row.name + '」吗？', '提示', { type: 'warning' }).then(() => {
+        api.delete('/category/' + row.id).then(() => { ElMessage.success('删除成功'); loadData(); });
+      }).catch(() => {});
+    }
+    function fmtTime(row, col, val) { return val ? new Date(val).toLocaleString() : ''; }
+
+    onMounted(loadData);
+    return { list, loading, total, page, pageSize, query, loadData, goPage, dialogVisible, isEdit, form, formRef, saving, openAdd, openEdit, handleSubmit, handleDelete, fmtTime };
+  }
+};
+
+// --- Product Management ---
+const Product = {
+  template: `
+    <div>
+      <div class="page-header">
+        <div class="page-title">产品 LOGO 素材管理</div>
+        <el-button type="primary" size="small" @click="openAdd">新增产品</el-button>
+      </div>
+      <div class="content-card">
+        <div class="search-form">
+          <el-input v-model="query.name" placeholder="产品名称" clearable style="width:160px" />
+          <el-select v-model="query.categoryId" placeholder="所属分类" clearable style="width:140px">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+          <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD" style="width:240px" />
+          <el-button type="primary" @click="loadData">搜索</el-button>
+        </div>
+        <el-table :data="list" stripe v-loading="loading" style="width:100%">
+          <el-table-column prop="id" label="ID" width="60" />
+          <el-table-column prop="productName" label="产品名称" />
+          <el-table-column prop="categoryName" label="所属分类" width="100" />
+          <el-table-column label="Logo 预览" width="90">
+            <template #default="{row}">
+              <img v-if="row.logoPreviewUrl" :src="row.logoPreviewUrl" class="upload-preview" />
+              <span v-else style="color:#ccc">无</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sort" label="排序" width="60" />
+          <el-table-column label="压缩包" width="100">
+            <template #default="{row}">
+              <a v-if="row.zipFileUrl" :href="row.zipFileUrl" target="_blank" class="file-link">{{row.zipFileName||'下载'}}</a>
+              <span v-else style="color:#ccc">未上传</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="updateTime" label="更新时间" width="170" :formatter="fmtTime" />
+          <el-table-column label="操作" width="160">
+            <template #default="{row}">
+              <el-button link type="primary" size="small" @click="openDetail(row)">查看</el-button>
+              <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div style="margin-top:16px;text-align:right">
+          <el-pagination v-model:page-size="pageSize" :total="total" :current-page="page" layout="total,prev,pager,next" @current-change="goPage" small />
+        </div>
+      </div>
+    </div>
+    <!-- Add/Edit Dialog -->
+    <el-dialog v-model="dialogVisible" :title="isEdit?'编辑产品素材':'新增产品 LOGO 素材'" width="600px" :close-on-click-modal="false">
+      <el-form :model="form" ref="formRef" label-width="110px">
+        <el-form-item label="产品名称" prop="productName" :rules="[{required:true,message:'请输入产品名称'}]">
+          <el-input v-model="form.productName" placeholder="1-50字符" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="产品分类" prop="categoryId" :rules="[{required:true,message:'请选择分类'}]">
+          <el-select v-model="form.categoryId" placeholder="请选择" style="width:100%">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="LOGO 预览图">
+          <el-upload :http-request="uploadLogo" :show-file-list="false" accept=".png,.jpg,.jpeg,.svg,.ico">
+            <el-button size="small">选择图片</el-button>
+            <template #tip><span style="font-size:12px;color:#999;margin-left:8px;">可选，建议透明背景 png</span></template>
+          </el-upload>
+          <img v-if="form.logoPreviewUrl" :src="form.logoPreviewUrl" style="width:80px;height:80px;object-fit:contain;border-radius:4px;margin-top:8px;border:1px solid #eee;" />
+        </el-form-item>
+        <el-form-item label="整合压缩包" prop="zipFileUrl" :rules="isEdit?[]:[{required:true,message:'请上传压缩包'}]">
+          <el-upload :http-request="uploadZip" :show-file-list="false" accept=".zip">
+            <el-button size="small">选择文件</el-button>
+            <template #tip><span style="font-size:12px;color:#999;margin-left:8px;">仅 .zip，最大 200MB</span></template>
+          </el-upload>
+          <div v-if="form.zipFileName" style="margin-top:8px;font-size:13px;color:#409eff;">{{form.zipFileName}}</div>
+        </el-form-item>
+        <el-form-item label="素材说明"><el-input v-model="form.descText" type="textarea" :rows="3" placeholder="前端下载弹窗展示文案" /></el-form-item>
+        <el-form-item label="卡片排序号" prop="sort" :rules="[{required:true,message:'请输入排序号'}]">
+          <el-input-number v-model="form.sort" :min="1" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="更新时间">
+          <el-input :model-value="form.updateTime" disabled placeholder="保存后自动生成" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible=false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="saving">确定提交</el-button>
+      </template>
+    </el-dialog>
+    <!-- Detail Dialog -->
+    <el-dialog v-model="detailVisible" title="素材详情" width="480px">
+      <div style="text-align:center;">
+        <img v-if="detail.logoPreviewUrl" :src="detail.logoPreviewUrl" class="detail-logo" />
+        <div v-else style="width:120px;height:120px;border:1px dashed #ddd;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#ccc;margin:0 auto;">无预览图</div>
+      </div>
+      <div class="detail-info">
+        <p><span class="label">产品名称：</span>{{detail.productName}}</p>
+        <p><span class="label">更新时间：</span>{{fmtTime(null,null,detail.updateTime)}}</p>
+        <p><span class="label">所属分类：</span>{{detail.categoryName}}</p>
+        <p><span class="label">素材说明：</span>{{detail.descText || '无'}}</p>
+        <p v-if="detail.zipFileUrl"><span class="label">压缩包：</span><a :href="detail.zipFileUrl" target="_blank" class="file-link">{{detail.zipFileName||'点击下载'}}</a></p>
+      </div>
+    </el-dialog>
+  `,
+  setup() {
+    const list = ref([]); const loading = ref(false); const total = ref(0); const page = ref(1); const pageSize = ref(10);
+    const categories = ref([]); const dateRange = ref(null);
+    const query = reactive({ name: '', categoryId: '' });
+    const dialogVisible = ref(false); const isEdit = ref(false); const editingId = ref(null); const detailVisible = ref(false);
+    const detail = reactive({ productName: '', categoryName: '', logoPreviewUrl: '', updateTime: '', descText: '', zipFileUrl: '', zipFileName: '' });
+    const form = reactive({ productName: '', categoryId: null, logoPreviewUrl: '', zipFileUrl: '', zipFileName: '', descText: '', sort: 10, updateTime: '' });
+    const saving = ref(false); const formRef = ref(null);
+
+    function loadCategories() { api.get('/category/all').then(r => categories.value = r.data); }
+    function loadData() {
+      loading.value = true; page.value = 1;
+      const params = { ...query, page: page.value, pageSize: pageSize.value };
+      if (dateRange.value) { params.startTime = dateRange.value[0]; params.endTime = dateRange.value[1]; }
+      api.get('/product/list', { params }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function goPage(p) {
+      page.value = p; loading.value = true;
+      const params = { ...query, page: p, pageSize: pageSize.value };
+      if (dateRange.value) { params.startTime = dateRange.value[0]; params.endTime = dateRange.value[1]; }
+      api.get('/product/list', { params }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+
+    function uploadLogo(options) {
+      const fd = new FormData(); fd.append('logoImage', options.file);
+      api.post('/product/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => {
+        form.logoPreviewUrl = r.data.logoUrl;
+        ElMessage.success('上传成功');
+      }).catch(() => ElMessage.error('上传失败'));
+    }
+    function uploadZip(options) {
+      const fd = new FormData(); fd.append('zipFile', options.file);
+      api.post('/product/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => {
+        form.zipFileUrl = r.data.zipUrl; form.zipFileName = r.data.zipName;
+        ElMessage.success('上传成功');
+      }).catch(() => ElMessage.error('上传失败'));
+    }
+
+    function openAdd() {
+      isEdit.value = false; editingId.value = null;
+      form.productName = ''; form.categoryId = null; form.logoPreviewUrl = ''; form.zipFileUrl = ''; form.zipFileName = ''; form.descText = ''; form.sort = 10; form.updateTime = '';
+      dialogVisible.value = true;
+      nextTick(() => formRef.value?.clearValidate());
+    }
+    function openEdit(row) {
+      isEdit.value = true; editingId.value = row.id;
+      form.productName = row.productName; form.categoryId = row.categoryId; form.logoPreviewUrl = row.logoPreviewUrl || '';
+      form.zipFileUrl = row.zipFileUrl || ''; form.zipFileName = row.zipFileName || ''; form.descText = row.descText || ''; form.sort = row.sort; form.updateTime = row.updateTime;
+      dialogVisible.value = true;
+      nextTick(() => formRef.value?.clearValidate());
+    }
+    function openDetail(row) {
+      detail.productName = row.productName; detail.categoryName = row.categoryName; detail.logoPreviewUrl = row.logoPreviewUrl || '';
+      detail.updateTime = row.updateTime; detail.descText = row.descText || ''; detail.zipFileUrl = row.zipFileUrl || ''; detail.zipFileName = row.zipFileName || '';
+      detailVisible.value = true;
+    }
+    function handleSubmit() {
+      formRef.value.validate(valid => {
+        if (!valid) return;
+        saving.value = true;
+        const body = { productName: form.productName, categoryId: form.categoryId, logoPreviewUrl: form.logoPreviewUrl, zipFileUrl: form.zipFileUrl, zipFileName: form.zipFileName, descText: form.descText, sort: form.sort };
+        const req = isEdit.value ? api.put('/product/' + editingId.value, body) : api.post('/product', body);
+        req.then(r => { ElMessage.success('操作成功'); dialogVisible.value = false; loadData(); }).finally(() => saving.value = false);
+      });
+    }
+    function handleDelete(row) {
+      ElMessageBox.confirm('确定删除产品「' + row.productName + '」吗？', '提示', { type: 'warning' }).then(() => {
+        api.delete('/product/' + row.id).then(() => { ElMessage.success('删除成功'); loadData(); });
+      }).catch(() => {});
+    }
+    function fmtTime(row, col, val) { return val ? new Date(val).toLocaleString() : ''; }
+
+    onMounted(() => { loadCategories(); loadData(); });
+    return { list, loading, total, page, pageSize, categories, dateRange, query, loadData, goPage, dialogVisible, isEdit, form, formRef, saving, detailVisible, detail, openAdd, openEdit, openDetail, handleSubmit, handleDelete, fmtTime, uploadLogo, uploadZip };
+  }
+};
+
+// --- Download Log ---
+const DownloadLog = {
+  template: `
+    <div>
+      <div class="page-header">
+        <div class="page-title">下载日志</div>
+        <el-button size="small" @click="exportLog">导出 Excel</el-button>
+      </div>
+      <div class="content-card">
+        <div class="search-form">
+          <el-input v-model="query.productName" placeholder="产品名称" clearable style="width:160px" />
+          <el-input v-model="query.ipAddr" placeholder="访问 IP" clearable style="width:140px" />
+          <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD" style="width:240px" />
+          <el-button type="primary" @click="loadData">搜索</el-button>
+        </div>
+        <el-table :data="list" stripe v-loading="loading" style="width:100%">
+          <el-table-column prop="downloadTime" label="下载时间" width="170" :formatter="fmtTime" />
+          <el-table-column prop="productName" label="产品名称" />
+          <el-table-column prop="fileName" label="压缩包文件名" />
+          <el-table-column prop="ipAddr" label="访问 IP" width="150" />
+          <el-table-column prop="browser" label="浏览器标识" min-width="200" show-overflow-tooltip />
+        </el-table>
+        <div style="margin-top:16px;text-align:right">
+          <el-pagination v-model:page-size="pageSize" :total="total" :current-page="page" layout="total,prev,pager,next" @current-change="goPage" small />
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const list = ref([]); const loading = ref(false); const total = ref(0); const page = ref(1); const pageSize = ref(10);
+    const dateRange = ref(null);
+    const query = reactive({ productName: '', ipAddr: '' });
+    function loadData() {
+      loading.value = true; page.value = 1;
+      const params = { ...query, page: page.value, pageSize: pageSize.value };
+      if (dateRange.value) { params.startTime = dateRange.value[0]; params.endTime = dateRange.value[1]; }
+      api.get('/download/list', { params }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function goPage(p) {
+      page.value = p; loading.value = true;
+      const params = { ...query, page: p, pageSize: pageSize.value };
+      if (dateRange.value) { params.startTime = dateRange.value[0]; params.endTime = dateRange.value[1]; }
+      api.get('/download/list', { params }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function exportLog() { window.open('/api/download/export?token=' + localStorage.getItem('admin_token')); }
+    function fmtTime(row, col, val) { return val ? new Date(val).toLocaleString() : ''; }
+    onMounted(loadData);
+    return { list, loading, total, page, pageSize, dateRange, query, loadData, goPage, exportLog, fmtTime };
+  }
+};
+
+// --- Operation Log ---
+const OperationLog = {
+  template: `
+    <div>
+      <div class="page-header"><div class="page-title">操作日志</div></div>
+      <div class="content-card">
+        <el-table :data="list" stripe v-loading="loading" style="width:100%">
+          <el-table-column prop="operationTime" label="操作时间" width="170" :formatter="fmtTime" />
+          <el-table-column prop="moduleType" label="功能模块" width="100" />
+          <el-table-column prop="operationType" label="操作类型" width="120" />
+          <el-table-column prop="operationContent" label="操作内容" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="operatorIp" label="操作 IP" width="150" />
+        </el-table>
+        <div style="margin-top:16px;text-align:right">
+          <el-pagination v-model:page-size="pageSize" :total="total" :current-page="page" layout="total,prev,pager,next" @current-change="goPage" small />
+        </div>
+      </div>
+    </div>
+  `,
+  setup() {
+    const list = ref([]); const loading = ref(false); const total = ref(0); const page = ref(1); const pageSize = ref(10);
+    function loadData() {
+      loading.value = true; page.value = 1;
+      api.get('/operation/list', { params: { page: page.value, pageSize: pageSize.value } }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function goPage(p) {
+      page.value = p; loading.value = true;
+      api.get('/operation/list', { params: { page: p, pageSize: pageSize.value } }).then(r => {
+        list.value = r.data.list; total.value = r.data.total;
+      }).finally(() => loading.value = false);
+    }
+    function fmtTime(row, col, val) { return val ? new Date(val).toLocaleString() : ''; }
+    onMounted(loadData);
+    return { list, loading, total, page, pageSize, loadData, goPage, fmtTime };
+  }
+};
+
+// --- Config ---
+const Config = {
+  template: `
+    <div>
+      <div class="page-header"><div class="page-title">系统配置</div></div>
+      <div class="content-card">
+        <el-table :data="configs" stripe style="width:100%">
+          <el-table-column prop="configKey" label="配置键" width="220" />
+          <el-table-column prop="configDesc" label="说明" width="180" />
+          <el-table-column label="值">
+            <template #default="{row}">
+              <el-input v-if="editingKey===row.configKey" v-model="editValue" />
+              <span v-else>{{row.configValue}}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100">
+            <template #default="{row}">
+              <el-button v-if="editingKey!==row.configKey" link type="primary" size="small" @click="startEdit(row)">编辑</el-button>
+              <el-button v-else link type="primary" size="small" @click="saveEdit(row)">保存</el-button>
+              <el-button v-if="editingKey===row.configKey" link type="info" size="small" @click="cancelEdit">取消</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+    <el-dialog v-model="pwdVisible" title="修改密码" width="400px">
+      <el-form :model="pwdForm" label-width="100px">
+        <el-form-item label="旧密码"><el-input v-model="pwdForm.oldPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="新密码"><el-input v-model="pwdForm.newPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="确认密码"><el-input v-model="pwdForm.confirmPassword" type="password" show-password /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdVisible=false">取消</el-button>
+        <el-button type="primary" @click="changePwd" :loading="pwdLoading">确定</el-button>
+      </template>
+    </el-dialog>
+  `,
+  setup() {
+    const configs = ref([]); const editingKey = ref(''); const editValue = ref('');
+    function loadConfigs() { api.get('/config/list').then(r => configs.value = r.data.list); }
+    function startEdit(row) { editingKey.value = row.configKey; editValue.value = row.configValue; }
+    function saveEdit(row) { api.put('/config/' + row.configKey, { value: editValue.value }).then(() => { editingKey.value = ''; loadConfigs(); ElMessage.success('保存成功'); }); }
+    function cancelEdit() { editingKey.value = ''; }
+    const pwdVisible = ref(false); const pwdLoading = ref(false);
+    const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    function changePwd() {
+      if (!pwdForm.oldPassword || !pwdForm.newPassword) { ElMessage.warning('请填写完整'); return; }
+      if (pwdForm.newPassword !== pwdForm.confirmPassword) { ElMessage.warning('两次密码不一致'); return; }
+      pwdLoading.value = true;
+      api.post('/auth/updatePwd', { oldPassword: pwdForm.oldPassword, newPassword: pwdForm.newPassword }).then(() => {
+        ElMessage.success('密码修改成功'); pwdVisible.value = false;
+        pwdForm.oldPassword = ''; pwdForm.newPassword = ''; pwdForm.confirmPassword = '';
+      }).finally(() => pwdLoading.value = false);
+    }
+    onMounted(loadConfigs);
+    return { configs, editingKey, editValue, startEdit, saveEdit, cancelEdit, pwdVisible, pwdLoading, pwdForm, changePwd };
+  }
+};
+
+// --- Layout Component ---
+const Layout = {
+  template: `
+    <div class="layout-container">
+      <div class="sidebar" :class="{collapsed: collapsed}">
+        <div class="sidebar-header">{{collapsed ? 'L' : 'LOGOPIM'}}</div>
+        <div class="sidebar-menu">
+          <div v-for="item in menuItems" :key="item.path" class="menu-item" :class="{active: currentPath===item.path}" @click="navigate(item.path)">
+            <span class="menu-icon" v-html="item.icon"></span>
+            <span class="menu-label" v-show="!collapsed">{{item.label}}</span>
+          </div>
+        </div>
+      </div>
+      <div class="main-area">
+        <div class="topbar">
+          <div class="topbar-left">
+            <span class="toggle-btn" @click="collapsed=!collapsed">{{collapsed ? '☰' : '✕'}}</span>
+            <span class="topbar-time">{{currentTime}}</span>
+          </div>
+          <div class="topbar-right">
+            <span class="topbar-user" @click="showPwd=true">
+              <el-icon><User /></el-icon> {{user?.nickName || user?.username}}
+            </span>
+            <el-button text size="small" @click="handleLogout">退出</el-button>
+          </div>
+        </div>
+        <div class="content-area">
+          <router-view @showPwd="showPwd=true"></router-view>
+        </div>
+      </div>
+    </div>
+    <!-- Password dialog (rendered globally) -->
+    <Config ref="configRef" />
+  `,
+  components: { Config: { ...Config } },
+  setup() {
+    const collapsed = ref(false);
+    const currentPath = ref('/');
+    const currentTime = ref('');
+    const showPwd = ref(false);
+    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const router = VueRouter.useRouter();
+    const route = VueRouter.useRoute();
+
+    const menuItems = [
+      { path: '/', label: '首页', icon: '&#xe602;' },
+      { path: '/category', label: '产品分类管理', icon: '&#xe61a;' },
+      { path: '/product', label: '产品LOGO素材管理', icon: '&#xe63a;' },
+      { path: '/download-log', label: '下载日志', icon: '&#xe63c;' },
+      { path: '/operation-log', label: '操作日志', icon: '&#xe615;' },
+      { path: '/config', label: '系统配置', icon: '&#xe613;' }
+    ];
+
+    watch(() => route.path, p => { currentPath.value = p; });
+    function navigate(path) { router.push(path); }
+
+    function handleLogout() {
+      ElMessageBox.confirm('确定退出登录吗？', '提示').then(() => {
+        api.post('/auth/logout').catch(() => {});
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        router.push('/login');
+      }).catch(() => {});
+    }
+
+    onMounted(() => {
+      currentPath.value = route.path;
+      setInterval(() => {
+        const d = new Date();
+        currentTime.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+      }, 1000);
+    });
+
+    return { collapsed, currentPath, currentTime, showPwd, user, menuItems, navigate, handleLogout };
+  }
+};
+
+// Routes
+const routes = [
+  { path: '/login', component: Login },
+  {
+    path: '/', component: Layout,
+    children: [
+      { path: '', component: Dashboard },
+      { path: 'category', component: Category },
+      { path: 'product', component: Product },
+      { path: 'download-log', component: DownloadLog },
+      { path: 'operation-log', component: OperationLog },
+      { path: 'config', component: Config }
+    ]
+  }
+];
+
+const router = VueRouter.createRouter({ history: VueRouter.createWebHistory(), routes });
+
+// Auth guard
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('admin_token');
+  if (to.path !== '/login' && !token) next('/login');
+  else if (to.path === '/login' && token) next('/');
+  else next();
+});
+
+const app = createApp({});
+app.use(router);
+app.use(ElementPlus);
+for (const [key, comp] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, comp);
+}
+app.mount('#app');
+</script>
+</body>
+</html>

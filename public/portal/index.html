@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGO 产品标识管理</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+  background: url(portal/assets/hero-mask.png) top center / 100% auto no-repeat, #f5f5f7;
+  color: #333;
+}
+.page { width: 1440px; margin: 0 auto; position: relative; min-height: 1080px; }
+
+/* Top bar */
+.topbar { position: absolute; top: 0; left: 0; width: 100%; height: 60px; }
+.logo-img { position: absolute; left: 152px; top: 23px; width: 80px; height: 13px; }
+.menu-btn {
+  position: absolute; left: 120px; top: 18px; width: 24px; height: 24px;
+  background: #333; border-radius: 4px; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Titles */
+.main-title { position: absolute; left: 120px; top: 104px; font-size: 42px; font-weight: 600; color: #333; line-height: 1.3; }
+.sub-title { position: absolute; left: 120px; top: 167px; font-size: 14px; font-weight: 300; color: #000; letter-spacing: 0.5px; }
+
+/* Tabs */
+.tab-label { position: absolute; left: 120px; top: 257px; font-size: 14px; font-weight: 500; color: #333; line-height: 20px; }
+.tab-area { position: absolute; top: 249px; left: 180px; display: flex; gap: 16px; flex-wrap: wrap; width: 1100px; }
+.tab {
+  width: 88px; height: 36px; border-radius: 46px; border: none; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  white-space: nowrap; font-family: inherit; transition: all 0.15s ease;
+}
+.tab.active { background: #333; color: #d6ffff; font-weight: 500; }
+.tab:not(.active) { background: #fff; color: #333; font-weight: 400; }
+.tab:not(.active):hover { background: #eaeaec; }
+
+/* Search bar (frosted glass) */
+.search-bar {
+  position: absolute; right: 120px; top: 114px;
+  width: 288px; height: 38px;
+  display: flex; align-items: center;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-radius: 6px; border: none; padding: 0 12px; gap: 8px;
+}
+.search-bar svg { width: 16px; height: 16px; flex-shrink: 0; color: #999; }
+.search-bar input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 14px; font-weight: 400; color: #333; line-height: 20px;
+}
+.search-bar input::placeholder { color: #999; }
+
+/* Cards */
+.cards-container { position: absolute; top: 340px; left: 120px; display: flex; flex-wrap: wrap; gap: 16px; width: 1200px; }
+.card {
+  width: 288px; height: 310px; background: #fff; border-radius: 6px;
+  position: relative; overflow: visible;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.card-preview { width: 138px; height: 138px; position: absolute; left: 75px; top: 81px; object-fit: contain; border-radius: 4px; }
+.card-title { position: absolute; top: 21px; left: 108px; width: 72px; text-align: center; font-size: 18px; font-weight: 600; color: #000; }
+.card-time { position: absolute; top: 53px; left: 64px; width: 161px; text-align: center; font-size: 12px; font-weight: 400; color: #999; }
+.card-logo { width: 81px; height: 81px; position: absolute; left: 104px; top: 109px; border-radius: 12px; object-fit: cover; z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.card-download {
+  position: absolute; left: 44px; top: 233px; width: 200px; height: 40px;
+  background: #f4f4f4; border-radius: 6px; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: inherit; font-size: 12px; font-weight: 400; color: #333;
+  transition: background 0.15s;
+}
+.card-download:hover { background: #e8e8ea; }
+.card-download svg { width: 12px; height: 12px; }
+
+/* Modal overlay (frosted glass) */
+.modal-overlay {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(69,69,69,0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal {
+  width: 500px; background: #fff; border-radius: 12px;
+  padding: 40px 40px 36px; position: relative;
+  transform: scale(0.9) translateY(24px);
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-overlay.active .modal { transform: scale(1) translateY(0); }
+.modal-overlay.closing { opacity: 0; transition: opacity 0.25s ease, visibility 0s 0.25s; }
+.modal-overlay.closing .modal { transform: scale(0.92) translateY(16px); transition: transform 0.25s ease; }
+.modal-top { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+.modal-logo { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; border: 1px solid #e6e6e6; flex-shrink: 0; }
+.modal-info { flex: 1; min-width: 0; padding-top: 14px; }
+.modal-title { font-size: 24px; font-weight: 600; color: #000; line-height: 34px; margin-bottom: 4px; }
+.modal-update-time { font-size: 12px; font-weight: 400; color: #999; line-height: 17px; }
+.modal-desc-label { font-size: 16px; font-weight: 500; color: #333; margin-bottom: 6px; }
+.modal-desc { font-size: 14px; font-weight: 400; color: #333; line-height: 1.6; margin-bottom: 28px; }
+.modal-buttons { display: flex; gap: 16px; }
+.modal-btn {
+  flex: 1; height: 46px; border-radius: 6px; border: none;
+  font-family: inherit; font-size: 14px; font-weight: 400;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity 0.15s;
+}
+.modal-btn:hover { opacity: 0.85; }
+.modal-btn-cancel { background: #f4f4f4; color: #000; }
+.modal-btn-download { background: #333; color: #d6ffff; }
+.modal-btn-download svg { width: 16px; height: 16px; }
+.loading-text { text-align: center; padding: 40px; color: #999; font-size: 14px; width: 100%; }
+.empty-text { text-align: center; padding: 40px; color: #999; font-size: 14px; width: 100%; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="menu-btn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="1.5">
+        <line x1="2.5" y1="4" x2="11.5" y2="4"/><line x1="2.5" y1="7" x2="11.5" y2="7"/><line x1="2.5" y1="10" x2="11.5" y2="10"/>
+      </svg>
+    </button>
+    <img class="logo-img" src="portal/assets/logo-logopim.png" alt="LOGOPIM">
+  </div>
+  <h1 class="main-title" id="pageTitle">用户体验处产品标识管理</h1>
+  <p class="sub-title" id="pageSubtitle">UX Department Product Identity Management</p>
+  <span class="tab-label">产品：</span>
+  <div class="tab-area" id="tabArea"></div>
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="请输入要搜索的产品名">
+  </div>
+  <div class="cards-container" id="cardsContainer"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-top">
+      <img class="modal-logo" id="modalLogo" src="" alt="">
+      <div class="modal-info">
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-update-time" id="modalTime"></div>
+      </div>
+    </div>
+    <div class="modal-desc-label">说明：</div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-cancel" id="modalCancel">取消</button>
+      <button class="modal-btn modal-btn-download" id="modalDownloadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/>
+          <polyline points="9 15 12 18 15 15"/>
+        </svg>
+        下载整合压缩包
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// State
+let allProducts = [];
+let allCategories = [];
+let activeCategoryId = null;
+let currentModalData = null;
+
+// API base
+const API = '/api';
+
+// Format time
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+}
+
+// Load categories
+async function loadCategories() {
+  try {
+    const res = await fetch(API + '/category/all');
+    const data = await res.json();
+    allCategories = data.data || [];
+    renderTabs();
+  } catch(e) { console.error('Failed to load categories:', e); }
+}
+
+// Render tabs
+function renderTabs() {
+  const area = document.getElementById('tabArea');
+  area.innerHTML = '<button class="tab active" data-id="">全部产品</button>';
+  allCategories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.textContent = cat.name;
+    btn.dataset.id = cat.id;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      activeCategoryId = cat.id;
+      renderCards();
+    });
+    area.appendChild(btn);
+  });
+  // "全部" tab click
+  area.firstChild.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    area.firstChild.classList.add('active');
+    activeCategoryId = null;
+    renderCards();
+  });
+}
+
+// Load products
+async function loadProducts() {
+  const container = document.getElementById('cardsContainer');
+  container.innerHTML = '<div class="loading-text">加载中...</div>';
+  try {
+    const url = API + '/product/public/list';
+    const res = await fetch(url);
+    const data = await res.json();
+    allProducts = data.data || [];
+    renderCards();
+  } catch(e) {
+    container.innerHTML = '<div class="empty-text">加载失败，请刷新重试</div>';
+    console.error('Failed to load products:', e);
+  }
+}
+
+// Render cards
+function renderCards() {
+  const container = document.getElementById('cardsContainer');
+  const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+  
+  let filtered = allProducts;
+  if (activeCategoryId) {
+    // Need to filter by category - but our API returned flat list with categoryName
+    // Actually the public/list API accepts ?categoryId= query param
+    // Let me re-fetch with category ID
+    fetchProductsWithFilter();
+    return;
+  }
+  if (keyword) {
+    filtered = filtered.filter(p => p.productName.toLowerCase().includes(keyword));
+  }
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-text">暂无数据</div>';
+    return;
+  }
+  
+  container.innerHTML = filtered.map(p => {
+    const logoIcon = p.logoPreviewUrl || 'portal/assets/card-logo.png';
+    return `<div class="card" data-id="${p.id}">
+      <h3 class="card-title">${p.productName}</h3>
+      <p class="card-time">更新时间 ： ${fmtTime(p.updateTime)}</p>
+      <img class="card-preview" src="portal/assets/card-preview.png" alt="">
+      <img class="card-logo" src="${logoIcon}" alt="" onerror="this.src='portal/assets/card-logo.png'">
+      <button class="card-download" data-id="${p.id}">
+        <svg viewBox="0 0 12 12" fill="none" stroke="#333" stroke-width="1.2"><path d="M6 1.5v7M3.5 6L6 8.5 8.5 6M1.5 10.5h9"/></svg>Download
+      </button>
+    </div>`;
+  }).join('');
+  
+  // Bind download buttons
+  document.querySelectorAll('.card-download').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const product = allProducts.find(p => p.id === id);
+      if (product) openModal(product);
+    });
+  });
+}
+
+// Fetch products with filter params
+async function fetchProductsWithFilter() {
+  const container = document.getElementById('cardsContainer');
+  const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+  
+  let url = API + '/product/public/list';
+  const params = [];
+  if (activeCategoryId) params.push('categoryId=' + activeCategoryId);
+  if (params.length) url += '?' + params.join('&');
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    let filtered = data.data || [];
+    if (keyword) {
+      filtered = filtered.filter(p => p.productName.toLowerCase().includes(keyword));
+    }
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-text">暂无数据</div>';
+      return;
+    }
+    container.innerHTML = filtered.map(p => {
+      const logoIcon = p.logoPreviewUrl || 'portal/assets/card-logo.png';
+      return `<div class="card" data-id="${p.id}">
+        <h3 class="card-title">${p.productName}</h3>
+        <p class="card-time">更新时间 ： ${fmtTime(p.updateTime)}</p>
+        <img class="card-preview" src="portal/assets/card-preview.png" alt="">
+        <img class="card-logo" src="${logoIcon}" alt="" onerror="this.src='portal/assets/card-logo.png'">
+        <button class="card-download" data-id="${p.id}">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#333" stroke-width="1.2"><path d="M6 1.5v7M3.5 6L6 8.5 8.5 6M1.5 10.5h9"/></svg>Download
+        </button>
+      </div>`;
+    }).join('');
+    
+    document.querySelectorAll('.card-download').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        const product = filtered.find(p => p.id === id);
+        if (product) openModal(product);
+      });
+    });
+  } catch(e) {
+    container.innerHTML = '<div class="empty-text">加载失败</div>';
+  }
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', () => {
+  renderCards();
+});
+
+// Modal
+const modal = document.getElementById('modal');
+const modalLogo = document.getElementById('modalLogo');
+const modalTitle = document.getElementById('modalTitle');
+const modalTime = document.getElementById('modalTime');
+const modalDesc = document.getElementById('modalDesc');
+const modalCancel = document.getElementById('modalCancel');
+const modalDownloadBtn = document.getElementById('modalDownloadBtn');
+
+function openModal(product) {
+  currentModalData = product;
+  modalLogo.src = product.logoPreviewUrl || 'portal/assets/card-logo.png';
+  modalTitle.textContent = product.productName;
+  modalTime.textContent = '更新时间 ： ' + fmtTime(product.updateTime);
+  modalDesc.textContent = '压缩包整合全规格 LOGO，视觉样式分为常规原版、反白、反黑三类；文件格式包含 PNG、SVG、ICO，适配官网、宣传物料、系统图标等各类设计场景。';
+  modal.classList.remove('closing');
+  void modal.offsetWidth;
+  modal.classList.add('active');
+}
+
+function closeModal() {
+  modal.classList.add('closing');
+  setTimeout(() => { modal.classList.remove('active', 'closing'); }, 280);
+}
+
+modalCancel.addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('active')) closeModal(); });
+
+// Download - trigger file download via API (also logs the download)
+modalDownloadBtn.addEventListener('click', () => {
+  if (!currentModalData) return;
+  const id = currentModalData.id;
+  // Open download in new tab (avoids navigating away)
+  window.open(API + '/product/public/download/' + id, '_blank');
+  closeModal();
+});
+
+// Init
+loadCategories();
+loadProducts();
+</script>
+</body>
+</html>
