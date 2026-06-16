@@ -70,12 +70,12 @@ router.post('/upload', authMiddleware, upload.fields([
   if (files.logoImage) {
     const f = files.logoImage[0];
     result.logoUrl = `/uploads/logos/${f.filename}`;
-    result.logoName = f.originalname;
+    result.logoName = Buffer.from(f.originalname, 'latin1').toString('utf8');
   }
   if (files.zipFile) {
     const f = files.zipFile[0];
     result.zipUrl = `/uploads/zips/${f.filename}`;
-    result.zipName = f.originalname;
+    result.zipName = Buffer.from(f.originalname, 'latin1').toString('utf8');
   }
   res.json({ code: 200, msg: '上传成功', data: result });
 });
@@ -150,7 +150,10 @@ router.get('/public/download/:id', (req, res) => {
   // Redirect to file
   const filePath = path.join(__dirname, '..', product.zipFileUrl);
   if (fs.existsSync(filePath)) {
-    res.download(filePath, product.zipFileName || 'package.zip');
+    const dlFileName = product.zipFileName || 'package.zip';
+    const encodedName = encodeURIComponent(dlFileName);
+    res.set('Content-Disposition', `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`);
+    res.sendFile(filePath);
   } else {
     res.json({ code: 500, msg: '文件不存在或已被删除' });
   }
